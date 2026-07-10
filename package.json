@@ -1,0 +1,33 @@
+{
+  "name": "rcgo",
+  "version": "1.0.0",
+  "description": "BEP-20 token contracts (ANB, DOS, BDL) for BNB Smart Chain",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network bscTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network bscMainnet"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gihun09071006-cloud/RCGO.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gihun09071006-cloud/RCGO/issues"
+  },
+  "homepage": "https://github.com/gihun09071006-cloud/RCGO#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^17.4.2",
+    "hardhat": "^2.28.6"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1"
+  }
+}
