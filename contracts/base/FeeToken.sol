@@ -6,12 +6,20 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @notice BEP-20 base token with an owner-adjustable transfer fee.
-/// @dev Fee is expressed in basis points (1 bps = 0.01%) and capped by
-/// MAX_FEE_RATE_BPS so the owner can never route 100% of a transfer away.
+/// @dev Fee is expressed in basis points (1 bps = 0.01%), up to and
+/// including FEE_DENOMINATOR (100%). A 100% fee is intentionally allowed
+/// so the owner can neutralize sandwich/arbitrage bots by routing an
+/// attacker's entire transfer to the fee recipient; use setFeeExempt to
+/// keep legitimate users/pools unaffected while such a rate is active.
 /// Minting and burning are never subject to the fee.
+///
+/// NOTE ON TRUST: because the owner can set the rate up to 100% for
+/// non-exempt accounts, holders are trusting the owner not to grief
+/// transfers. Consider a timelock or multisig owner, and communicate any
+/// active fee rate to holders.
 abstract contract FeeToken is ERC20, ERC20Burnable, Ownable {
     uint256 public constant FEE_DENOMINATOR = 10_000;
-    uint256 public constant MAX_FEE_RATE_BPS = 1_000; // 10% hard cap
+    uint256 public constant MAX_FEE_RATE_BPS = FEE_DENOMINATOR; // 100% hard cap
 
     uint256 public feeRateBps;
     address public feeRecipient;

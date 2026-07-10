@@ -97,6 +97,21 @@ for (const { contract, name, symbol } of TOKENS) {
         );
       });
 
+      it("allows a 100% fee rate to neutralize a non-exempt transfer (anti-bot mode)", async function () {
+        const seedAmount = ethers.parseUnits("1000", 18);
+        await token.transfer(other.address, seedAmount); // owner is exempt, no fee here
+
+        await token.setFeeRate(10_000); // 100%
+        const sendAmount = ethers.parseUnits("100", 18);
+
+        await token.connect(other).transfer(third.address, sendAmount);
+
+        expect(await token.balanceOf(third.address)).to.equal(0);
+        expect(await token.balanceOf(owner.address)).to.equal(
+          INITIAL_SUPPLY - seedAmount + sendAmount
+        );
+      });
+
       it("does not charge a fee for exempt accounts", async function () {
         await token.setFeeRate(500);
         await token.setFeeExempt(other.address, true);

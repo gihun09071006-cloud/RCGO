@@ -16,7 +16,10 @@ implementation. All three share the `FeeToken` base contract
 
 - `feeRateBps()` — current fee rate in basis points (100 = 1%). Starts at `0`.
 - `setFeeRate(uint256 newRateBps)` — owner-only; capped at `MAX_FEE_RATE_BPS`
-  (1,000 bps = 10%) so the owner can never route away an entire transfer.
+  (10,000 bps = 100%). A 100% rate is allowed on purpose: it lets the owner
+  neutralize sandwich/arbitrage bots by routing a non-exempt transfer's
+  entire value to the fee recipient instead of the bot. Combine with
+  `setFeeExempt` so real users/pools aren't caught by it while it's active.
 - `feeRecipient()` / `setFeeRecipient(address)` — owner-only; where collected
   fees go. Defaults to the deployer.
 - `isFeeExempt(address)` / `setFeeExempt(address, bool)` — owner-only;
@@ -24,6 +27,13 @@ implementation. All three share the `FeeToken` base contract
   are exempt by default.
 - Minting and burning are never subject to the fee, regardless of exemption
   status.
+
+**Trust tradeoff**: because the owner can push the fee to 100% for any
+non-exempt address, holders are trusting the owner not to grief ordinary
+transfers with it — a malicious or compromised owner could use it exactly
+like a transfer pause. Mitigate with a multisig/timelock owner and by
+communicating the current rate to holders (e.g. via the `FeeRateUpdated`
+event).
 
 | Contract | File | Name | Symbol |
 |---|---|---|---|
