@@ -1,20 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./base/FeeToken.sol";
 
 /// @notice BEP-20 token deployed on BNB Smart Chain (symbol: ANB)
-contract AnbToken is ERC20, ERC20Burnable, Ownable {
+contract AnbToken is FeeToken {
     constructor(uint256 initialSupply, address initialOwner)
         ERC20("Anb Token", "ANB")
-        Ownable(initialOwner)
-    {
-        _mint(initialOwner, initialSupply);
-    }
-
-    function mint(address to, uint256 amount) external onlyOwner {
-        _mint(to, amount);
-    }
+        FeeToken(initialSupply, initialOwner)
+    {}
 }

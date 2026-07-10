@@ -18,7 +18,7 @@ const contractFiles = fs
 function findImport(importPath) {
   const candidates = [
     path.join(ROOT, "node_modules", importPath),
-    path.join(CONTRACTS_DIR, importPath),
+    path.join(ROOT, importPath),
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
