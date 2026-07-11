@@ -42,6 +42,34 @@ for (const { contract, name, symbol } of TOKENS) {
       ).to.be.revertedWithCustomError(token, "OwnableUnauthorizedAccount");
     });
 
+    it("permanently disables mint() once renounced, without touching ownership", async function () {
+      expect(await token.mintingRenounced()).to.equal(false);
+
+      await expect(token.renounceMinting()).to.emit(token, "MintingRenounced");
+      expect(await token.mintingRenounced()).to.equal(true);
+
+      await expect(
+        token.mint(other.address, ethers.parseUnits("100", 18))
+      ).to.be.revertedWith("FeeToken: minting renounced");
+
+      // fee controls still work post-renounce
+      await expect(token.setFeeRate(100)).to.emit(token, "FeeRateUpdated");
+      expect(await token.owner()).to.equal(owner.address);
+    });
+
+    it("rejects renouncing minting twice", async function () {
+      await token.renounceMinting();
+      await expect(token.renounceMinting()).to.be.revertedWith(
+        "FeeToken: already renounced"
+      );
+    });
+
+    it("rejects renouncing minting from a non-owner account", async function () {
+      await expect(
+        token.connect(other).renounceMinting()
+      ).to.be.revertedWithCustomError(token, "OwnableUnauthorizedAccount");
+    });
+
     it("allows holders to burn their own tokens", async function () {
       const burnAmount = ethers.parseUnits("1000", 18);
       await token.burn(burnAmount);

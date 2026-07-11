@@ -5,12 +5,27 @@ implementation. All three share the `FeeToken` base contract
 (`contracts/base/FeeToken.sol`) and are:
 
 - **Fixed-supply on deploy**: 1,000,000,000 tokens (18 decimals) minted to the deployer
-- **Mintable**: the owner can mint additional supply later (`mint(to, amount)`)
+- **Mint, then permanently renounced**: `scripts/deploy.js` calls
+  `renounceMinting()` right after deployment, so total supply is fixed
+  forever after that — see "Minting" below
 - **Burnable**: any holder can burn their own tokens (`burn(amount)`)
 - **Ownable**: owner-restricted functions use OpenZeppelin's `Ownable`
 - **Adjustable transfer fee**: the owner can set a transfer fee (in basis
   points) that is deducted from ordinary transfers and routed to a fee
   recipient address
+
+### Minting
+
+- `mint(address to, uint256 amount)` — owner-only, blocked once
+  `mintingRenounced()` is `true`.
+- `renounceMinting()` — owner-only, one-way switch that permanently disables
+  `mint()`. Unlike `Ownable.renounceOwnership()`, this does **not** give up
+  the owner role — fee controls (rate/recipient/exemptions) still work
+  afterward, since those are what you need for anti-bot protection.
+- `scripts/deploy.js` calls `renounceMinting()` immediately after each
+  token's initial supply is minted, so by the time the deploy script exits,
+  supply is already fixed. If you deploy manually instead, call
+  `renounceMinting()` yourself right after deployment.
 
 ### Transfer fee
 
@@ -83,14 +98,55 @@ addresses.
 npx hardhat verify --network bscTestnet <CONTRACT_ADDRESS> <INITIAL_SUPPLY> <OWNER_ADDRESS>
 ```
 
+## Simple audit (Slither)
+
+A free static analyzer is enough for a project this size — it won't catch
+everything a paid audit would, but it flags the common classes of bugs
+(reentrancy, unchecked calls, bad access control, etc.) for zero cost. Run
+it locally (needs network access to fetch a solc build, which this sandbox
+didn't have):
+
+```bash
+pip install slither-analyzer
+solc-select install 0.8.26 && solc-select use 0.8.26
+slither . --exclude-dependencies
+```
+
+Review every finding before mainnet deploy. Slither will likely flag things
+we've already made deliberate tradeoffs on (e.g. owner privileges for the
+fee controls) — those are expected, not bugs; treat any finding about
+external calls, arithmetic, or access control on functions we didn't
+discuss as the ones worth a second look.
+
+## Wallets
+
+You do not need one deployer + one fee wallet per token. A practical
+minimum for all three tokens together:
+
+- **1 deployer wallet** — pays gas, deploys all three contracts. Can be a
+  throwaway hot wallet if you plan to `transferOwnership` afterward.
+- **1 owner wallet** (ideally a multisig) — ends up controlling fee settings
+  for all three tokens. One shared owner is fine; you don't need a separate
+  one per token unless you specifically want to isolate their admin rights.
+- **1 fee-recipient (treasury) wallet** — `feeRecipient` can be the same
+  address for all three tokens; a shared treasury is simpler to account for
+  than three separate ones. Split it into per-token wallets only if you want
+  separate bookkeeping per token.
+
+So the minimum is closer to **2–3 wallets total**, not 6. Since minting is
+renounced right after deploy, the owner's remaining power is just the fee
+controls — still worth putting behind a multisig, but there's less at stake
+than before.
+
 ## Security notes
 
 - `PRIVATE_KEY` in `.env` controls the deployer wallet — never commit `.env`
   (it's already git-ignored) or share that key.
 - Test thoroughly on `bscTestnet` before deploying to mainnet.
 - Consider a multisig (e.g. Gnosis Safe) as the owner address for mainnet
-  deployments instead of a single EOA, since the owner can mint new supply
-  and change the transfer fee.
+  deployments instead of a single EOA, since the owner still controls the
+  transfer fee (rate, recipient, exemptions) even after minting is
+  renounced.
 - If you list on a DEX, exempt the liquidity pool address from the fee
   (`setFeeExempt`) or thoroughly test against your router/pool contracts —
   fee-on-transfer tokens can break AMM math and some routers if the pool

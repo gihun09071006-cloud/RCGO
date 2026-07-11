@@ -25,9 +25,14 @@ abstract contract FeeToken is ERC20, ERC20Burnable, Ownable {
     address public feeRecipient;
     mapping(address => bool) public isFeeExempt;
 
+    /// @notice Once true, mint() is permanently disabled. Does not affect
+    /// ownership or fee controls, which the owner keeps for anti-bot use.
+    bool public mintingRenounced;
+
     event FeeRateUpdated(uint256 oldRateBps, uint256 newRateBps);
     event FeeRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
     event FeeExemptionUpdated(address indexed account, bool exempt);
+    event MintingRenounced();
 
     constructor(uint256 initialSupply, address initialOwner) Ownable(initialOwner) {
         feeRecipient = initialOwner;
@@ -37,7 +42,16 @@ abstract contract FeeToken is ERC20, ERC20Burnable, Ownable {
     }
 
     function mint(address to, uint256 amount) external onlyOwner {
+        require(!mintingRenounced, "FeeToken: minting renounced");
         _mint(to, amount);
+    }
+
+    /// @notice Permanently disables mint(). Irreversible; total supply is
+    /// fixed from this point on except for holder-initiated burns.
+    function renounceMinting() external onlyOwner {
+        require(!mintingRenounced, "FeeToken: already renounced");
+        mintingRenounced = true;
+        emit MintingRenounced();
     }
 
     /// @param newRateBps New fee rate in basis points (100 = 1%). Must be <= MAX_FEE_RATE_BPS.
