@@ -27,9 +27,8 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: {
-      bscTestnet: BSCSCAN_API_KEY || "",
-      bsc: BSCSCAN_API_KEY || "",
-    },
+    // Etherscan's unified v2 API covers BscScan too; one key works for
+    // both bscTestnet and bscMainnet (get one at etherscan.io/myapikey).
+    apiKey: BSCSCAN_API_KEY || "",
   },
 };
