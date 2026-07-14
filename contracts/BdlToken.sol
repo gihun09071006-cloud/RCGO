@@ -6,7 +6,7 @@ import "./base/FeeToken.sol";
 /// @notice BEP-20 token deployed on BNB Smart Chain (symbol: BDL)
 contract BdlToken is FeeToken {
     constructor(uint256 initialSupply, address initialOwner)
-        ERC20("Bdl Token", "BDL")
+        ERC20("Billboard Liq", "BDL")
         FeeToken(initialSupply, initialOwner)
     {}
 }

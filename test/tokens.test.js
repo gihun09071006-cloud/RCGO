@@ -1,16 +1,15 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const INITIAL_SUPPLY = ethers.parseUnits("1000000000", 18);
-
 const TOKENS = [
-  { contract: "AnbToken", name: "Anb Token", symbol: "ANB" },
-  { contract: "DosToken", name: "Dos Token", symbol: "DOS" },
-  { contract: "BdlToken", name: "Bdl Token", symbol: "BDL" },
+  { contract: "AnbToken", name: "Anubis Chain", symbol: "ANB", supply: "50000000" },
+  { contract: "DosToken", name: "Dappos", symbol: "DOS", supply: "100000000" },
+  { contract: "BdlToken", name: "Billboard Liq", symbol: "BDL", supply: "100000000" },
 ];
 
-for (const { contract, name, symbol } of TOKENS) {
+for (const { contract, name, symbol, supply } of TOKENS) {
   describe(contract, function () {
+    const INITIAL_SUPPLY = ethers.parseUnits(supply, 18);
     let token, owner, other, third;
 
     beforeEach(async function () {

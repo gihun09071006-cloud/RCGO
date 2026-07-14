@@ -4,7 +4,8 @@ Three BEP-20 tokens for BNB Smart Chain, built with OpenZeppelin's ERC20
 implementation. All three share the `FeeToken` base contract
 (`contracts/base/FeeToken.sol`) and are:
 
-- **Fixed-supply on deploy**: 1,000,000,000 tokens (18 decimals) minted to the deployer
+- **Fixed-supply on deploy**: 18 decimals, per-token supply set in
+  `scripts/deploy.js`, minted to the deployer
 - **Mint, then permanently renounced**: `scripts/deploy.js` calls
   `renounceMinting()` right after deployment, so total supply is fixed
   forever after that — see "Minting" below
@@ -50,15 +51,11 @@ like a transfer pause. Mitigate with a multisig/timelock owner and by
 communicating the current rate to holders (e.g. via the `FeeRateUpdated`
 event).
 
-| Contract | File | Name | Symbol |
-|---|---|---|---|
-| `AnbToken` | `contracts/AnbToken.sol` | Anb Token | ANB |
-| `DosToken` | `contracts/DosToken.sol` | Dos Token | DOS |
-| `BdlToken` | `contracts/BdlToken.sol` | Bdl Token | BDL |
-
-Rename the token `name` strings in the contracts if you have official
-project names in mind — the symbols (ANB/DOS/BDL) are already fixed to
-match your request.
+| Contract | File | Name | Symbol | Initial supply |
+|---|---|---|---|---|
+| `AnbToken` | `contracts/AnbToken.sol` | Anubis Chain | ANB | 50,000,000 |
+| `DosToken` | `contracts/DosToken.sol` | Dappos | DOS | 100,000,000 |
+| `BdlToken` | `contracts/BdlToken.sol` | Billboard Liq | BDL | 100,000,000 |
 
 ## Setup
 
@@ -77,10 +74,19 @@ npm test
 
 ## Deploy
 
+By default `scripts/deploy.js` deploys all three tokens. To deploy only one
+(e.g. ship ANB first, DOS/BDL later), set `DEPLOY_TOKENS` to a comma-separated
+list of contract names before running it.
+
 ```bash
-# local Hardhat network (for a quick sanity check)
+# local Hardhat network (free, fake BNB — always do this before mainnet)
 npx hardhat node               # in one terminal
-npm run deploy:local            # in another terminal
+npm run deploy:local            # in another terminal, deploys all three
+
+# ...or just one token locally:
+#   macOS/Linux:   DEPLOY_TOKENS=AnbToken npm run deploy:local
+#   Windows PowerShell:
+#     $env:DEPLOY_TOKENS="AnbToken"; npm run deploy:local
 
 # BSC testnet (chainId 97)
 npm run deploy:testnet
@@ -89,8 +95,13 @@ npm run deploy:testnet
 npm run deploy:mainnet
 ```
 
-`scripts/deploy.js` deploys all three tokens in one run and prints their
-addresses.
+`DEPLOY_TOKENS` works the same way against `deploy:testnet` /
+`deploy:mainnet` — e.g. on Windows PowerShell, to ship only ANB to mainnet:
+
+```powershell
+$env:DEPLOY_TOKENS="AnbToken"
+npm run deploy:mainnet
+```
 
 ## Verify on BscScan
 
