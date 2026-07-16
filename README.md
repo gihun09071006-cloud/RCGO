@@ -32,10 +32,12 @@ implementation. All three share the `FeeToken` base contract
 
 - `feeRateBps()` — current fee rate in basis points (100 = 1%). Starts at `0`.
 - `setFeeRate(uint256 newRateBps)` — owner-only; capped at `MAX_FEE_RATE_BPS`
-  (10,000 bps = 100%). A 100% rate is allowed on purpose: it lets the owner
-  neutralize sandwich/arbitrage bots by routing a non-exempt transfer's
-  entire value to the fee recipient instead of the bot. Combine with
-  `setFeeExempt` so real users/pools aren't caught by it while it's active.
+  (1,000 bps = 10%). The cap is deliberately well under 100%: wallets and
+  scanners (MetaMask/Blockaid, TokenSniffer, etc.) flag any token whose owner
+  can zero out a transfer's value as honeypot-shaped, regardless of intent —
+  a 10% cap still discourages bots without tripping that heuristic as hard.
+  Combine with `setFeeExempt` so real users/pools aren't taxed while a rate
+  is active.
 - `feeRecipient()` / `setFeeRecipient(address)` — owner-only; where collected
   fees go. Defaults to the deployer.
 - `isFeeExempt(address)` / `setFeeExempt(address, bool)` — owner-only;
@@ -44,12 +46,18 @@ implementation. All three share the `FeeToken` base contract
 - Minting and burning are never subject to the fee, regardless of exemption
   status.
 
-**Trust tradeoff**: because the owner can push the fee to 100% for any
-non-exempt address, holders are trusting the owner not to grief ordinary
-transfers with it — a malicious or compromised owner could use it exactly
-like a transfer pause. Mitigate with a multisig/timelock owner and by
-communicating the current rate to holders (e.g. via the `FeeRateUpdated`
-event).
+**Trust tradeoff**: because the owner can raise the fee for any non-exempt
+address, holders are trusting the owner not to grief ordinary transfers with
+it. Mitigate with a multisig/timelock owner and by communicating the current
+rate to holders (e.g. via the `FeeRateUpdated` event).
+
+**Wallet/scanner warnings**: even at a 10% cap, some wallets (MetaMask via
+Blockaid) may still flag an owner-adjustable fee as suspicious/malicious —
+this is a known tradeoff of the anti-bot design, not a bug. If it matters
+more than the anti-bot capability for a given token, the only full fix is
+`renounceOwnership()` once the fee is set where you want it permanently (this
+gives up fee/exemption control forever, on top of what `renounceMinting()`
+already gives up).
 
 | Contract | File | Name | Symbol | Initial supply |
 |---|---|---|---|---|
