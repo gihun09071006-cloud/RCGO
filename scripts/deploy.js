@@ -3,7 +3,7 @@ const hre = require("hardhat");
 // Per-token config: name/symbol live in the contract itself, supply lives here.
 const TOKENS = [
   { contract: "AnbToken", supply: "50000000" }, // Anubis Chain (ANB)
-  { contract: "DosToken", supply: "100000000" }, // Dappos (DOS)
+  { contract: "DosToken", supply: "10000000" }, // Dappos (DOS)
   { contract: "BdlToken", supply: "100000000" }, // Billboard Liq (BDL)
 ];
 
