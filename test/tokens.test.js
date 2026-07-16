@@ -10,12 +10,12 @@ const TOKENS = [
 for (const { contract, name, symbol, supply } of TOKENS) {
   describe(contract, function () {
     const INITIAL_SUPPLY = ethers.parseUnits(supply, 18);
-    let token, owner, other;
+    let token, holder, other;
 
     beforeEach(async function () {
-      [owner, other] = await ethers.getSigners();
+      [holder, other] = await ethers.getSigners();
       const Factory = await ethers.getContractFactory(contract);
-      token = await Factory.deploy(INITIAL_SUPPLY, owner.address);
+      token = await Factory.deploy(INITIAL_SUPPLY, holder.address);
       await token.waitForDeployment();
     });
 
@@ -25,46 +25,10 @@ for (const { contract, name, symbol, supply } of TOKENS) {
       expect(await token.decimals()).to.equal(18);
     });
 
-    it("mints the initial supply to the owner", async function () {
+    it("mints the entire fixed supply to the initial holder, with no mint function", async function () {
       expect(await token.totalSupply()).to.equal(INITIAL_SUPPLY);
-      expect(await token.balanceOf(owner.address)).to.equal(INITIAL_SUPPLY);
-    });
-
-    it("allows the owner to mint additional tokens", async function () {
-      await token.mint(other.address, ethers.parseUnits("100", 18));
-      expect(await token.balanceOf(other.address)).to.equal(ethers.parseUnits("100", 18));
-    });
-
-    it("rejects minting from a non-owner account", async function () {
-      await expect(
-        token.connect(other).mint(other.address, ethers.parseUnits("100", 18))
-      ).to.be.revertedWithCustomError(token, "OwnableUnauthorizedAccount");
-    });
-
-    it("permanently disables mint() once renounced, without touching ownership", async function () {
-      expect(await token.mintingRenounced()).to.equal(false);
-
-      await expect(token.renounceMinting()).to.emit(token, "MintingRenounced");
-      expect(await token.mintingRenounced()).to.equal(true);
-
-      await expect(
-        token.mint(other.address, ethers.parseUnits("100", 18))
-      ).to.be.revertedWith("MintOnceToken: minting renounced");
-
-      expect(await token.owner()).to.equal(owner.address);
-    });
-
-    it("rejects renouncing minting twice", async function () {
-      await token.renounceMinting();
-      await expect(token.renounceMinting()).to.be.revertedWith(
-        "MintOnceToken: already renounced"
-      );
-    });
-
-    it("rejects renouncing minting from a non-owner account", async function () {
-      await expect(
-        token.connect(other).renounceMinting()
-      ).to.be.revertedWithCustomError(token, "OwnableUnauthorizedAccount");
+      expect(await token.balanceOf(holder.address)).to.equal(INITIAL_SUPPLY);
+      expect(token.mint).to.equal(undefined);
     });
 
     it("allows holders to burn their own tokens", async function () {
@@ -73,10 +37,17 @@ for (const { contract, name, symbol, supply } of TOKENS) {
       expect(await token.totalSupply()).to.equal(INITIAL_SUPPLY - burnAmount);
     });
 
+    it("rejects burning more than the caller's balance", async function () {
+      await expect(
+        token.connect(other).burn(ethers.parseUnits("1", 18))
+      ).to.be.revertedWithCustomError(token, "ERC20InsufficientBalance");
+    });
+
     it("transfers the full amount between accounts (no fee)", async function () {
       const amount = ethers.parseUnits("500", 18);
       await token.transfer(other.address, amount);
       expect(await token.balanceOf(other.address)).to.equal(amount);
+      expect(await token.balanceOf(holder.address)).to.equal(INITIAL_SUPPLY - amount);
     });
   });
 }

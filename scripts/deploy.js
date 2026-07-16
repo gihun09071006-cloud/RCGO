@@ -34,13 +34,7 @@ async function main() {
     const address = await token.getAddress();
     const symbol = await token.symbol();
     console.log(`${contractName} (${symbol}) deployed to: ${address}`);
-    console.log(`  initial supply: ${supply} ${symbol}`);
-
-    // Permanently disable mint() right after the initial supply is minted.
-    // Ownership (and therefore fee controls) is untouched.
-    const renounceTx = await token.renounceMinting();
-    await renounceTx.wait();
-    console.log(`  minting renounced for ${symbol} (total supply now fixed)`);
+    console.log(`  initial supply: ${supply} ${symbol} (fixed forever, no mint function exists)`);
   }
 }
 

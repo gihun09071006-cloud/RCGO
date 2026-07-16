@@ -1,46 +1,34 @@
 # BSC Tokens: ANB / DOS / BDL
 
 Three BEP-20 tokens for BNB Smart Chain, built with OpenZeppelin's ERC20
-implementation. All three share the `MintOnceToken` base contract
-(`contracts/base/MintOnceToken.sol`) and are:
+implementation. All three share the `FixedSupplyToken` base contract
+(`contracts/base/FixedSupplyToken.sol`) and are:
 
-- **Fixed-supply on deploy**: 18 decimals, per-token supply set in
-  `scripts/deploy.js`, minted to the deployer
-- **Mint, then permanently renounced**: `scripts/deploy.js` calls
-  `renounceMinting()` right after deployment, so total supply is fixed
-  forever after that — see "Minting" below
+- **Fixed-supply, minted once at deployment**: 18 decimals, per-token supply
+  set in `scripts/deploy.js`, minted entirely to the deployer in the
+  constructor. There is no `mint` function at all — supply can never
+  increase, by anyone, ever.
 - **Burnable**: any holder can burn their own tokens (`burn(amount)`)
-- **Ownable**: owner-restricted functions use OpenZeppelin's `Ownable`
-- **No transfer fee, no owner-adjustable transfer logic of any kind** —
-  see "Why no transfer fee" below
+- **No owner, no admin functions, no transfer fee** — see "Why no owner"
+  below
 
-### Minting
+### Why no owner
 
-- `mint(address to, uint256 amount)` — owner-only, blocked once
-  `mintingRenounced()` is `true`.
-- `renounceMinting()` — owner-only, one-way switch that permanently disables
-  `mint()`. Total supply is fixed from that point on except for
-  holder-initiated burns.
-- `scripts/deploy.js` calls `renounceMinting()` immediately after each
-  token's initial supply is minted, so by the time the deploy script exits,
-  supply is already fixed. If you deploy manually instead, call
-  `renounceMinting()` yourself right after deployment.
+Earlier versions of these contracts kept an `Ownable` owner around: first
+for an adjustable transfer fee meant to discourage bots, then (after
+removing the fee) just for a mint-then-renounce pattern. Wallet and scanner
+heuristics — MetaMask via Blockaid, TokenSniffer, and similar — flag *any*
+owner-adjustable capability as a risk factor, regardless of intent or
+whether it's ever exercised: an adjustable fee read as honeypot-shaped even
+capped at 10%, and even a renounceable mint function shows up as
+"owner-controlled minting" until the owner actually renounces it on-chain.
+The only way to clear that whole class of finding is to not have an owner
+at all. `FixedSupplyToken` mints once in the constructor and nothing else —
+there's nothing left for a scanner to flag, and nothing left to renounce.
 
-### Why no transfer fee
-
-An earlier version of these contracts had an owner-adjustable transfer fee
-(with a per-address exemption list) meant to discourage sandwich/arbitrage
-bots. In practice, wallet and scanner heuristics — MetaMask via Blockaid,
-TokenSniffer, and similar — flag *any* contract where the owner can reduce
-or redirect a transfer's value as honeypot-shaped, regardless of the cap or
-the intent behind it. Lowering the cap from 100% to 10% didn't clear the
-warning. The fee mechanism was removed entirely rather than tuned further:
-`mint`-then-`renounce` plus `burn` is a well-understood, low-risk pattern
-that doesn't trip that class of warning.
-
-If you deployed an earlier version of one of these tokens with the fee
-still present, that contract is unaffected — its bytecode is immutable.
-This only changes what gets deployed going forward.
+If you deployed an earlier version of one of these tokens (with a fee, or
+with a renounceable mint), that contract is unaffected — its bytecode is
+immutable. This only changes what gets deployed going forward.
 
 | Contract | File | Name | Symbol | Initial supply |
 |---|---|---|---|---|
@@ -94,10 +82,13 @@ $env:DEPLOY_TOKENS="AnbToken"
 npm run deploy:mainnet
 ```
 
+**There is nothing to do after deployment** — no `renounceMinting()`, no fee
+setup. The constructor mint is the only mint that will ever happen.
+
 ## Verify on BscScan
 
 ```bash
-npx hardhat verify --network bscTestnet <CONTRACT_ADDRESS> <INITIAL_SUPPLY> <OWNER_ADDRESS>
+npx hardhat verify --network bscTestnet <CONTRACT_ADDRESS> <INITIAL_SUPPLY> <INITIAL_HOLDER_ADDRESS>
 ```
 
 If BscScan reports "More than one contract was found to match the deployed
@@ -123,25 +114,16 @@ Review every finding before mainnet deploy.
 
 ## Wallets
 
-A practical minimum for all three tokens together:
-
-- **1 deployer wallet** — pays gas, deploys all three contracts. Can be a
-  throwaway hot wallet if you plan to `transferOwnership` afterward.
-- **1 owner wallet** (ideally a multisig) — ends up controlling `mint`/
-  `renounceMinting` for all three tokens. One shared owner is fine; you
-  don't need a separate one per token unless you specifically want to
-  isolate their admin rights.
-
-So **2 wallets total** covers it, not 6. Since minting is renounced right
-after deploy, the owner has no remaining power over an already-deployed
-token at all.
+Just **1 wallet** is needed per deployment run: it pays gas, deploys the
+contract(s), and receives the entire initial supply. There's no owner role
+to hand off to a multisig afterward — there's no owner at all.
 
 ## Security notes
 
 - `PRIVATE_KEY` in `.env` controls the deployer wallet — never commit `.env`
   (it's already git-ignored) or share that key.
 - Test thoroughly on `bscTestnet` before deploying to mainnet.
-- Consider a multisig (e.g. Gnosis Safe) as the owner address for mainnet
-  deployments — it's who controls `mint`/`renounceMinting` until you call
-  `renounceMinting()`, after which the owner has no special power over that
-  token left.
+- Since there's no owner and no mint, the only way to change a token's
+  circulating supply after launch is holders burning their own balance —
+  plan initial distribution accordingly, since there's no way to top it up
+  later.
