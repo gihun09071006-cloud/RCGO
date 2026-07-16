@@ -1,8 +1,8 @@
 # BSC Tokens: ANB / DOS / BDL
 
 Three BEP-20 tokens for BNB Smart Chain, built with OpenZeppelin's ERC20
-implementation. All three share the `FeeToken` base contract
-(`contracts/base/FeeToken.sol`) and are:
+implementation. All three share the `MintOnceToken` base contract
+(`contracts/base/MintOnceToken.sol`) and are:
 
 - **Fixed-supply on deploy**: 18 decimals, per-token supply set in
   `scripts/deploy.js`, minted to the deployer
@@ -11,58 +11,41 @@ implementation. All three share the `FeeToken` base contract
   forever after that — see "Minting" below
 - **Burnable**: any holder can burn their own tokens (`burn(amount)`)
 - **Ownable**: owner-restricted functions use OpenZeppelin's `Ownable`
-- **Adjustable transfer fee**: the owner can set a transfer fee (in basis
-  points) that is deducted from ordinary transfers and routed to a fee
-  recipient address
+- **No transfer fee, no owner-adjustable transfer logic of any kind** —
+  see "Why no transfer fee" below
 
 ### Minting
 
 - `mint(address to, uint256 amount)` — owner-only, blocked once
   `mintingRenounced()` is `true`.
 - `renounceMinting()` — owner-only, one-way switch that permanently disables
-  `mint()`. Unlike `Ownable.renounceOwnership()`, this does **not** give up
-  the owner role — fee controls (rate/recipient/exemptions) still work
-  afterward, since those are what you need for anti-bot protection.
+  `mint()`. Total supply is fixed from that point on except for
+  holder-initiated burns.
 - `scripts/deploy.js` calls `renounceMinting()` immediately after each
   token's initial supply is minted, so by the time the deploy script exits,
   supply is already fixed. If you deploy manually instead, call
   `renounceMinting()` yourself right after deployment.
 
-### Transfer fee
+### Why no transfer fee
 
-- `feeRateBps()` — current fee rate in basis points (100 = 1%). Starts at `0`.
-- `setFeeRate(uint256 newRateBps)` — owner-only; capped at `MAX_FEE_RATE_BPS`
-  (1,000 bps = 10%). The cap is deliberately well under 100%: wallets and
-  scanners (MetaMask/Blockaid, TokenSniffer, etc.) flag any token whose owner
-  can zero out a transfer's value as honeypot-shaped, regardless of intent —
-  a 10% cap still discourages bots without tripping that heuristic as hard.
-  Combine with `setFeeExempt` so real users/pools aren't taxed while a rate
-  is active.
-- `feeRecipient()` / `setFeeRecipient(address)` — owner-only; where collected
-  fees go. Defaults to the deployer.
-- `isFeeExempt(address)` / `setFeeExempt(address, bool)` — owner-only;
-  addresses exempt from the fee. The deployer and the token contract itself
-  are exempt by default.
-- Minting and burning are never subject to the fee, regardless of exemption
-  status.
+An earlier version of these contracts had an owner-adjustable transfer fee
+(with a per-address exemption list) meant to discourage sandwich/arbitrage
+bots. In practice, wallet and scanner heuristics — MetaMask via Blockaid,
+TokenSniffer, and similar — flag *any* contract where the owner can reduce
+or redirect a transfer's value as honeypot-shaped, regardless of the cap or
+the intent behind it. Lowering the cap from 100% to 10% didn't clear the
+warning. The fee mechanism was removed entirely rather than tuned further:
+`mint`-then-`renounce` plus `burn` is a well-understood, low-risk pattern
+that doesn't trip that class of warning.
 
-**Trust tradeoff**: because the owner can raise the fee for any non-exempt
-address, holders are trusting the owner not to grief ordinary transfers with
-it. Mitigate with a multisig/timelock owner and by communicating the current
-rate to holders (e.g. via the `FeeRateUpdated` event).
-
-**Wallet/scanner warnings**: even at a 10% cap, some wallets (MetaMask via
-Blockaid) may still flag an owner-adjustable fee as suspicious/malicious —
-this is a known tradeoff of the anti-bot design, not a bug. If it matters
-more than the anti-bot capability for a given token, the only full fix is
-`renounceOwnership()` once the fee is set where you want it permanently (this
-gives up fee/exemption control forever, on top of what `renounceMinting()`
-already gives up).
+If you deployed an earlier version of one of these tokens with the fee
+still present, that contract is unaffected — its bytecode is immutable.
+This only changes what gets deployed going forward.
 
 | Contract | File | Name | Symbol | Initial supply |
 |---|---|---|---|---|
 | `AnbToken` | `contracts/AnbToken.sol` | Anubis Chain | ANB | 50,000,000 |
-| `DosToken` | `contracts/DosToken.sol` | Dappos | DOS | 100,000,000 |
+| `DosToken` | `contracts/DosToken.sol` | Dappos | DOS | 10,000,000 |
 | `BdlToken` | `contracts/BdlToken.sol` | Billboard Liq | BDL | 100,000,000 |
 
 ## Setup
@@ -117,6 +100,11 @@ npm run deploy:mainnet
 npx hardhat verify --network bscTestnet <CONTRACT_ADDRESS> <INITIAL_SUPPLY> <OWNER_ADDRESS>
 ```
 
+If BscScan reports "More than one contract was found to match the deployed
+bytecode" (ANB/DOS/BDL only differ by name/symbol, so their runtime bytecode
+matches), add `--contract contracts/AnbToken.sol:AnbToken` (swap in the
+right file/contract name) to disambiguate.
+
 ## Simple audit (Slither)
 
 A free static analyzer is enough for a project this size — it won't catch
@@ -131,31 +119,22 @@ solc-select install 0.8.26 && solc-select use 0.8.26
 slither . --exclude-dependencies
 ```
 
-Review every finding before mainnet deploy. Slither will likely flag things
-we've already made deliberate tradeoffs on (e.g. owner privileges for the
-fee controls) — those are expected, not bugs; treat any finding about
-external calls, arithmetic, or access control on functions we didn't
-discuss as the ones worth a second look.
+Review every finding before mainnet deploy.
 
 ## Wallets
 
-You do not need one deployer + one fee wallet per token. A practical
-minimum for all three tokens together:
+A practical minimum for all three tokens together:
 
 - **1 deployer wallet** — pays gas, deploys all three contracts. Can be a
   throwaway hot wallet if you plan to `transferOwnership` afterward.
-- **1 owner wallet** (ideally a multisig) — ends up controlling fee settings
-  for all three tokens. One shared owner is fine; you don't need a separate
-  one per token unless you specifically want to isolate their admin rights.
-- **1 fee-recipient (treasury) wallet** — `feeRecipient` can be the same
-  address for all three tokens; a shared treasury is simpler to account for
-  than three separate ones. Split it into per-token wallets only if you want
-  separate bookkeeping per token.
+- **1 owner wallet** (ideally a multisig) — ends up controlling `mint`/
+  `renounceMinting` for all three tokens. One shared owner is fine; you
+  don't need a separate one per token unless you specifically want to
+  isolate their admin rights.
 
-So the minimum is closer to **2–3 wallets total**, not 6. Since minting is
-renounced right after deploy, the owner's remaining power is just the fee
-controls — still worth putting behind a multisig, but there's less at stake
-than before.
+So **2 wallets total** covers it, not 6. Since minting is renounced right
+after deploy, the owner has no remaining power over an already-deployed
+token at all.
 
 ## Security notes
 
@@ -163,10 +142,6 @@ than before.
   (it's already git-ignored) or share that key.
 - Test thoroughly on `bscTestnet` before deploying to mainnet.
 - Consider a multisig (e.g. Gnosis Safe) as the owner address for mainnet
-  deployments instead of a single EOA, since the owner still controls the
-  transfer fee (rate, recipient, exemptions) even after minting is
-  renounced.
-- If you list on a DEX, exempt the liquidity pool address from the fee
-  (`setFeeExempt`) or thoroughly test against your router/pool contracts —
-  fee-on-transfer tokens can break AMM math and some routers if the pool
-  itself isn't exempt.
+  deployments — it's who controls `mint`/`renounceMinting` until you call
+  `renounceMinting()`, after which the owner has no special power over that
+  token left.

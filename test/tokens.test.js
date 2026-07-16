@@ -3,17 +3,17 @@ const { ethers } = require("hardhat");
 
 const TOKENS = [
   { contract: "AnbToken", name: "Anubis Chain", symbol: "ANB", supply: "50000000" },
-  { contract: "DosToken", name: "Dappos", symbol: "DOS", supply: "100000000" },
+  { contract: "DosToken", name: "Dappos", symbol: "DOS", supply: "10000000" },
   { contract: "BdlToken", name: "Billboard Liq", symbol: "BDL", supply: "100000000" },
 ];
 
 for (const { contract, name, symbol, supply } of TOKENS) {
   describe(contract, function () {
     const INITIAL_SUPPLY = ethers.parseUnits(supply, 18);
-    let token, owner, other, third;
+    let token, owner, other;
 
     beforeEach(async function () {
-      [owner, other, third] = await ethers.getSigners();
+      [owner, other] = await ethers.getSigners();
       const Factory = await ethers.getContractFactory(contract);
       token = await Factory.deploy(INITIAL_SUPPLY, owner.address);
       await token.waitForDeployment();
@@ -49,17 +49,15 @@ for (const { contract, name, symbol, supply } of TOKENS) {
 
       await expect(
         token.mint(other.address, ethers.parseUnits("100", 18))
-      ).to.be.revertedWith("FeeToken: minting renounced");
+      ).to.be.revertedWith("MintOnceToken: minting renounced");
 
-      // fee controls still work post-renounce
-      await expect(token.setFeeRate(100)).to.emit(token, "FeeRateUpdated");
       expect(await token.owner()).to.equal(owner.address);
     });
 
     it("rejects renouncing minting twice", async function () {
       await token.renounceMinting();
       await expect(token.renounceMinting()).to.be.revertedWith(
-        "FeeToken: already renounced"
+        "MintOnceToken: already renounced"
       );
     });
 
@@ -75,103 +73,10 @@ for (const { contract, name, symbol, supply } of TOKENS) {
       expect(await token.totalSupply()).to.equal(INITIAL_SUPPLY - burnAmount);
     });
 
-    it("transfers tokens between accounts", async function () {
+    it("transfers the full amount between accounts (no fee)", async function () {
       const amount = ethers.parseUnits("500", 18);
       await token.transfer(other.address, amount);
       expect(await token.balanceOf(other.address)).to.equal(amount);
-    });
-
-    describe("transfer fee", function () {
-      it("starts with a zero fee rate and the owner as fee recipient", async function () {
-        expect(await token.feeRateBps()).to.equal(0);
-        expect(await token.feeRecipient()).to.equal(owner.address);
-        expect(await token.isFeeExempt(owner.address)).to.equal(true);
-      });
-
-      it("allows the owner to change the fee rate", async function () {
-        await expect(token.setFeeRate(250))
-          .to.emit(token, "FeeRateUpdated")
-          .withArgs(0, 250);
-        expect(await token.feeRateBps()).to.equal(250);
-      });
-
-      it("rejects a fee rate above the cap", async function () {
-        const cap = await token.MAX_FEE_RATE_BPS();
-        await expect(token.setFeeRate(cap + 1n)).to.be.revertedWith(
-          "FeeToken: rate exceeds cap"
-        );
-      });
-
-      it("rejects fee rate changes from a non-owner account", async function () {
-        await expect(
-          token.connect(other).setFeeRate(100)
-        ).to.be.revertedWithCustomError(token, "OwnableUnauthorizedAccount");
-      });
-
-      it("deducts the fee on transfers between non-exempt accounts", async function () {
-        const seedAmount = ethers.parseUnits("1000", 18);
-        await token.transfer(other.address, seedAmount); // owner is exempt, no fee here
-
-        await token.setFeeRate(500); // 5%
-        const sendAmount = ethers.parseUnits("100", 18);
-        const expectedFee = (sendAmount * 500n) / 10000n;
-
-        await token.connect(other).transfer(third.address, sendAmount);
-
-        expect(await token.balanceOf(third.address)).to.equal(sendAmount - expectedFee);
-        expect(await token.balanceOf(owner.address)).to.equal(
-          INITIAL_SUPPLY - seedAmount + expectedFee
-        );
-      });
-
-      it("allows the maximum fee rate to tax a non-exempt transfer (anti-bot mode)", async function () {
-        const seedAmount = ethers.parseUnits("1000", 18);
-        await token.transfer(other.address, seedAmount); // owner is exempt, no fee here
-
-        const cap = await token.MAX_FEE_RATE_BPS();
-        await token.setFeeRate(cap);
-        const sendAmount = ethers.parseUnits("100", 18);
-        const expectedFee = (sendAmount * cap) / 10000n;
-
-        await token.connect(other).transfer(third.address, sendAmount);
-
-        expect(await token.balanceOf(third.address)).to.equal(sendAmount - expectedFee);
-        expect(await token.balanceOf(owner.address)).to.equal(
-          INITIAL_SUPPLY - seedAmount + expectedFee
-        );
-      });
-
-      it("does not charge a fee for exempt accounts", async function () {
-        await token.setFeeRate(500);
-        await token.setFeeExempt(other.address, true);
-        await token.transfer(other.address, ethers.parseUnits("1000", 18));
-
-        await token.connect(other).transfer(third.address, ethers.parseUnits("100", 18));
-        expect(await token.balanceOf(third.address)).to.equal(ethers.parseUnits("100", 18));
-      });
-
-      it("never charges a fee on mint or burn", async function () {
-        await token.setFeeRate(500);
-        const mintAmount = ethers.parseUnits("100", 18);
-        await token.mint(third.address, mintAmount);
-        expect(await token.balanceOf(third.address)).to.equal(mintAmount);
-
-        await token.connect(third).burn(mintAmount);
-        expect(await token.balanceOf(third.address)).to.equal(0);
-      });
-
-      it("allows the owner to change the fee recipient", async function () {
-        await expect(token.setFeeRecipient(third.address))
-          .to.emit(token, "FeeRecipientUpdated")
-          .withArgs(owner.address, third.address);
-        expect(await token.feeRecipient()).to.equal(third.address);
-      });
-
-      it("rejects a zero-address fee recipient", async function () {
-        await expect(
-          token.setFeeRecipient(ethers.ZeroAddress)
-        ).to.be.revertedWith("FeeToken: zero recipient");
-      });
     });
   });
 }
