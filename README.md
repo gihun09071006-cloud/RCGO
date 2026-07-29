@@ -1,7 +1,7 @@
-# BSC Tokens: ANB / DOS / BDL
+# BSC Tokens: ANB / DOS / BDL / WKP / wkeyDAO3
 
-Three BEP-20 tokens for BNB Smart Chain, built with OpenZeppelin's ERC20
-implementation. All three share the `FixedSupplyToken` base contract
+Five BEP-20 tokens for BNB Smart Chain, built with OpenZeppelin's ERC20
+implementation. All of them share the `FixedSupplyToken` base contract
 (`contracts/base/FixedSupplyToken.sol`) and are:
 
 - **Fixed-supply, minted once at deployment**: 18 decimals, per-token supply
@@ -35,6 +35,8 @@ immutable. This only changes what gets deployed going forward.
 | `AnbToken` | `contracts/AnbToken.sol` | Anubis Chain | ANB | 50,000,000 |
 | `DosToken` | `contracts/DosToken.sol` | Dappos | DOS | 10,000,000 |
 | `BdlToken` | `contracts/BdlToken.sol` | Billboard Liq | BDL | 100,000,000 |
+| `WkpToken` | `contracts/WkpToken.sol` | wkeyplus | WKP | 3,000,000,000 |
+| `WkeyDao3Token` | `contracts/WkeyDao3Token.sol` | wkeyDAO3 | wkeyDAO3 | 3,000,000,000 |
 
 ## Setup
 

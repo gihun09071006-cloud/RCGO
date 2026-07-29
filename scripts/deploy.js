@@ -5,6 +5,8 @@ const TOKENS = [
   { contract: "AnbToken", supply: "50000000" }, // Anubis Chain (ANB)
   { contract: "DosToken", supply: "10000000" }, // Dappos (DOS)
   { contract: "BdlToken", supply: "100000000" }, // Billboard Liq (BDL)
+  { contract: "WkpToken", supply: "3000000000" }, // wkeyplus (WKP)
+  { contract: "WkeyDao3Token", supply: "3000000000" }, // wkeyDAO3
 ];
 
 // Optional: set DEPLOY_TOKENS="AnbToken" (comma-separated contract names) to
