@@ -1,6 +1,6 @@
-# BSC Tokens: ANB / DOS / BDL / WKP / wkeyDAO3
+# BSC Tokens: ANB / DOS (Dappos) / BDL / WKP / wkeyDAO3 / DOS (DappOS)
 
-Five BEP-20 tokens for BNB Smart Chain, built with OpenZeppelin's ERC20
+Six BEP-20 tokens for BNB Smart Chain, built with OpenZeppelin's ERC20
 implementation. All of them share the `FixedSupplyToken` base contract
 (`contracts/base/FixedSupplyToken.sol`) and are:
 
@@ -37,6 +37,42 @@ immutable. This only changes what gets deployed going forward.
 | `BdlToken` | `contracts/BdlToken.sol` | Billboard Liq | BDL | 100,000,000 |
 | `WkpToken` | `contracts/WkpToken.sol` | wkeyplus | WKP | 3,000,000,000 |
 | `WkeyDao3Token` | `contracts/WkeyDao3Token.sol` | wkeyDAO3 | wkeyDAO3 | 3,000,000,000 |
+| `DappOsToken` | `contracts/DappOsToken.sol` | DappOS | DOS | 3,000,000,000 |
+
+`DappOsToken` is an unrelated project from the earlier `DosToken` (Dappos) —
+they just happen to share the `DOS` symbol, which is not enforced to be
+unique on-chain. Don't confuse the two; double-check the contract address,
+not just the symbol, before interacting with either.
+
+## DappOS allocation
+
+`DappOsToken`'s entire fixed supply is minted to the deployer wallet, same
+as every other token here. `scripts/distribute-dappos.js` is a one-time
+follow-up script that splits it out to the planned allocation via plain
+`transfer()` calls (no vesting/lockup logic — if you need tokens to unlock
+over time rather than all at once, that's a separate contract, not this
+script):
+
+| Bucket | % | Amount |
+|---|---|---|
+| Airdrop | 6% | 180,000,000 |
+| Ecosystem | 20% | 600,000,000 |
+| Treasury | 20% | 600,000,000 |
+| Team | 20% | 600,000,000 |
+| Investors | 22.5% | 675,000,000 |
+| Marketing | 11.5% | 345,000,000 |
+
+Before running it, open `scripts/distribute-dappos.js` and replace
+`TOKEN_ADDRESS` and all six `0xREPLACE_*` wallet addresses with the real
+ones. The script refuses to run if any placeholder is still in place, or if
+the percentages don't sum to 100%.
+
+```bash
+npx hardhat run scripts/distribute-dappos.js --network bscMainnet
+```
+
+It prints each transfer as it happens and the sender's remaining balance at
+the end (should be `0` once all six allocations match 100%).
 
 ## Setup
 

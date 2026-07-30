@@ -7,6 +7,7 @@ const TOKENS = [
   { contract: "BdlToken", name: "Billboard Liq", symbol: "BDL", supply: "100000000" },
   { contract: "WkpToken", name: "wkeyplus", symbol: "WKP", supply: "3000000000" },
   { contract: "WkeyDao3Token", name: "wkeyDAO3", symbol: "wkeyDAO3", supply: "3000000000" },
+  { contract: "DappOsToken", name: "DappOS", symbol: "DOS", supply: "3000000000" },
 ];
 
 for (const { contract, name, symbol, supply } of TOKENS) {
