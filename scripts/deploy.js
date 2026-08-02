@@ -7,7 +7,7 @@ const TOKENS = [
   { contract: "BdlToken", supply: "100000000" }, // Billboard Liq (BDL)
   { contract: "WkpToken", supply: "3000000000" }, // wkeyplus (WKP)
   { contract: "WkeyDao3Token", supply: "3000000000" }, // wkeyDAO3
-  { contract: "DappOsToken", supply: "3000000000" }, // DappOS (DOS) -- separate project from the earlier Dappos (DOS)
+  { contract: "DappOsToken", supply: "1000000000" }, // DappOS (DOS) -- separate project from the earlier Dappos (DOS)
 ];
 
 // Optional: set DEPLOY_TOKENS="AnbToken" (comma-separated contract names) to

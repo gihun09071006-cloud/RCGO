@@ -37,12 +37,20 @@ immutable. This only changes what gets deployed going forward.
 | `BdlToken` | `contracts/BdlToken.sol` | Billboard Liq | BDL | 100,000,000 |
 | `WkpToken` | `contracts/WkpToken.sol` | wkeyplus | WKP | 3,000,000,000 |
 | `WkeyDao3Token` | `contracts/WkeyDao3Token.sol` | wkeyDAO3 | wkeyDAO3 | 3,000,000,000 |
-| `DappOsToken` | `contracts/DappOsToken.sol` | DappOS | DOS | 3,000,000,000 |
+| `DappOsToken` | `contracts/DappOsToken.sol` | DappOS | DOS | 1,000,000,000 |
 
 `DappOsToken` is an unrelated project from the earlier `DosToken` (Dappos) —
 they just happen to share the `DOS` symbol, which is not enforced to be
 unique on-chain. Don't confuse the two; double-check the contract address,
 not just the symbol, before interacting with either.
+
+A first `DappOsToken` deployment went out with the wrong supply
+(3,000,000,000 instead of 1,000,000,000) and was already distributed to all
+six allocation wallets before the mistake was caught. Since this contract
+has no owner and no mint, that supply can't be corrected in place, so that
+deployment is abandoned — don't send it liquidity, don't link to it
+anywhere, and don't treat the tokens sitting in those six wallets as real
+allocation. The number below is for the corrected redeploy.
 
 ## DappOS allocation
 
@@ -55,12 +63,12 @@ script):
 
 | Bucket | % | Amount |
 |---|---|---|
-| Airdrop | 6% | 180,000,000 |
-| Ecosystem | 20% | 600,000,000 |
-| Treasury | 20% | 600,000,000 |
-| Team | 20% | 600,000,000 |
-| Investors | 22.5% | 675,000,000 |
-| Marketing | 11.5% | 345,000,000 |
+| Airdrop | 6% | 60,000,000 |
+| Ecosystem | 20% | 200,000,000 |
+| Treasury | 20% | 200,000,000 |
+| Team | 20% | 200,000,000 |
+| Investors | 22.5% | 225,000,000 |
+| Marketing | 11.5% | 115,000,000 |
 
 Before running it, open `scripts/distribute-dappos.js` and replace
 `TOKEN_ADDRESS` and all six `0xREPLACE_*` wallet addresses with the real
